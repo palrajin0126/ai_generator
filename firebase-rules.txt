@@ -1,0 +1,58 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /categories/{categoryId} {
+      allow read: if true;
+      allow create, update, delete: if request.auth != null;
+    }
+    match /products/{productId} {
+      allow read: if true;
+      allow create, update, delete: if request.auth != null;
+    }
+    match /featuredproducts/{featuredproductId} {
+      allow read: if true;
+      allow create, update, delete: if request.auth != null;
+    }
+    match /users/{userId} { 
+      allow read: if request.auth.uid == userId; 
+      allow create, update, delete: if request.auth != null; 
+    }
+  }
+}
+
+
+service firebase.storage {
+  match /b/{bucket}/o {
+    
+    match /categories/{userId}/{allPaths=**} {
+      allow read: if true;  
+      allow write: if request.auth.uid == userId; 
+    }
+
+    match /products/{userId}/{allPaths=**} {
+      allow read: if true; 
+      allow write: if request.auth.uid == userId; 
+    }
+    
+    match /featuredproducts/{userId}/{allPaths=**} {
+      allow read: if true; 
+      allow write: if request.auth.uid == userId; 
+    }
+
+  }
+}
+
+
+psql -h localhost -U postgres -d your_database_name
+
+
+
+
+GRANT USAGE ON SCHEMA public TO root;
+GRANT CREATE ON SCHEMA public TO root;
+GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO root;
+GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO root;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO root;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT USAGE, SELECT ON SEQUENCES TO root;
+
+
