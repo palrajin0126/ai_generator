@@ -1,14 +1,16 @@
 import psycopg2
 from psycopg2 import sql
+import streamlit as st
 
 # Database connection parameters
 db_params = {
-    'dbname': 'website_generator',
+    'dbname': 'socialmedia',
     'user': 'root',
     'password': 'arka1256',
     'host': 'localhost',
     'port': '5432'
 }
+
 
 def get_all_tables(cursor):
     """Retrieve all table names from the public schema."""
@@ -20,6 +22,7 @@ def get_all_tables(cursor):
     tables = cursor.fetchall()
     return [table[0] for table in tables]
 
+
 def fetch_table_content(cursor, table_name):
     """Fetch all content from a given table."""
     cursor.execute(sql.SQL("SELECT * FROM {}").format(sql.Identifier(table_name)))
@@ -27,34 +30,46 @@ def fetch_table_content(cursor, table_name):
     column_names = [desc[0] for desc in cursor.description]
     return column_names, rows
 
+
+def delete_row(cursor, conn, table_name, row_id):
+    """Delete a row from the given table."""
+    cursor.execute(sql.SQL("DELETE FROM {} WHERE id = %s").format(sql.Identifier(table_name)), [row_id])
+    conn.commit()
+
+
 def main():
-    try:
-        # Connect to the PostgreSQL database
-        conn = psycopg2.connect(**db_params)
-        cursor = conn.cursor()
+    # Connect to the PostgreSQL database
+    conn = psycopg2.connect(**db_params)
+    cursor = conn.cursor()
 
-        # Get all tables
-        tables = get_all_tables(cursor)
+    st.title("PostgreSQL Table Viewer")
 
-        for table in tables:
-            print(f"\nContent of table: {table}")
-            column_names, rows = fetch_table_content(cursor, table)
+    # Get all tables
+    tables = get_all_tables(cursor)
+    selected_table = st.selectbox("Select Table", tables)
 
-            # Print column names
-            print(column_names)
+    if selected_table:
+        column_names, rows = fetch_table_content(cursor, selected_table)
 
-            # Print all rows
-            for row in rows:
-                print(row)
+        if rows:
+            # Display table with radio buttons
+            selected_row = st.radio("Select Row", [i for i, _ in enumerate(rows)], format_func=lambda x: rows[x])
 
-    except Exception as error:
-        print(f"Error: {error}")
+            st.write(f"Selected Row: {rows[selected_row]}")
 
-    finally:
-        if cursor:
-            cursor.close()
-        if conn:
-            conn.close()
+            delete_button = st.button("Delete Row")
+            if delete_button:
+                delete_row(cursor, conn, selected_table, rows[selected_row][0])
+                st.success("Row deleted successfully.")
+                st.rerun()  # Refresh the page to show updated table
+
+        else:
+            st.warning("No data available in this table.")
+
+    # Close the cursor and connection
+    cursor.close()
+    conn.close()
+
 
 if __name__ == "__main__":
     main()
